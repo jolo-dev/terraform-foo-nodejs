@@ -1,0 +1,209 @@
+---
+- name: Deploy foo_app to EC2 instance
+  hosts: my_ec2_instance
+  become: yes
+  gather_facts: no
+
+  vars:
+    local_ip: "202.138.13.136"
+
+  tasks:
+    - name: Add firewall rules for local machine
+      ufw:
+        rule: allow
+        from_ip: "{{ local_ip }}"
+        port: "{{ item }}"
+        proto: tcp
+        direction: "{{ direction }}"
+      with_items:
+        - 22
+        - 80
+      loop_control:
+        label: "{{ item }} inbound {{ direction }}"
+      vars:
+        direction: "in"
+
+    - name: Add firewall rule for outbound traffic
+      ufw:
+        rule: allow
+        to_port: 443
+        proto: tcp
+        direction: "out"
+
+    - name: Add outbound firewall rule for all traffic to anywhere
+      ufw:
+        rule: allow
+        proto: any
+        direction: out
+        to_ip: any
+
+    - name: Install Python 3
+      apt:
+        name: python3
+        state: present
+
+    - name: Install required system packages for Docker
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+          - gnupg-agent
+        state: latest
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: true
+
+    - name: Install docker-py module
+      pip:
+        name: docker-py
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Ansible
+      pip:
+        name: ansible
+        executable: pip3
+      become: true
+
+    - name: Install PostgreSQL
+      apt:
+        name: postgresql
+        state: present
+      become: true
+
+    - name: Kill process listening on port 5432
+      become: yes
+      shell: "sudo lsof -t -i:5432"
+      register: lsof_result
+      ignore_errors: yes
+
+    - debug:
+        var: lsof_result.stdout
+
+    - name: Kill PostgreSQL process
+      become: yes
+      shell: "sudo kill -9 {{ lsof_result.stdout }} || true"
+      when: lsof_result.stdout is defined
+
+    - debug:
+        msg: "Process killed successfully."
+
+    - name: Create data directory on remote host
+      become: yes
+      file:
+        path: /root/data
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    #- name: Create data directory on remote host
+    #  ansible.builtin.file:
+    #    path: ~/root/data
+    #    state: directory
+    #    owner: root
+    #    group: root
+    #    mode: '0755'
+
+    - name: Copy snapshot-prod-data.sql to remote host
+      ansible.builtin.copy:
+        src: ~/data/snapshot-prod-data.sql
+        dest: /root/data/snapshot-prod-data.sql
+        mode: 0644
+
+    - name: Copy index.js to remote host
+      ansible.builtin.copy:
+        src: ~/data/index.js
+        dest: /root/data/index.js
+        mode: 0644
+
+    - name: Copy package.json to remote host
+      ansible.builtin.copy:
+        src: ~/data/package.json
+        dest: /root/data/package.json
+        mode: 0644
+
+    - name: Copy Dockerfile to remote host
+      ansible.builtin.copy:
+        src: ~/data/Dockerfile
+        dest: /root/data/Dockerfile
+        mode: 0644
+
+    - name: Create views directory on remote host
+      ansible.builtin.file:
+        path: /root/data/views
+        state: directory
+
+    - name: Copy index.ejs to remote host
+      ansible.builtin.copy:
+        src: ~/data/views/index.ejs
+        dest: /root/data/views/index.ejs
+        mode: 0644
+
+    - name: Copy foos.ejs to remote host
+      ansible.builtin.copy:
+        src: ~/data/views/foos.ejs
+        dest: /root/data/views/foos.ejs
+        mode: 0644
+
+    - name: Start PostgreSQL Container
+      docker_container:
+        name: my_postgres_container
+        image: postgres:14.7
+        env:
+          POSTGRES_USER: pete
+          POSTGRES_PASSWORD: devops
+          POSTGRES_DB: foo
+        volumes:
+          - "/root/data/snapshot-prod-data.sql:/docker-entrypoint-initdb.d/init.sql"
+        ports:
+          - "5432:5432"
+        restart_policy: always
+        state: started
+
+    - name: Wait for PostgreSQL Container to be Running
+      ansible.builtin.wait_for:
+        host: localhost
+        port: 5432
+        delay: 5
+        timeout: 300
+        state: started
+
+    - name: Pull Docker image
+      docker_image:
+        name: "patrmitacr.azurecr.io/assignment2app:1.0.0"
+        source: pull
+        state: present
+      become: yes
+
+    - name: Build Docker image for foo_app
+      command: "docker build -t foo_app /root/data/"
+      become: yes
+
+    - name: Run foo_app Container
+      docker_container:
+        name: foo_app
+        image: foo_app
+        ports:
+          - "80:80"
