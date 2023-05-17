@@ -12,6 +12,11 @@ variable "public_subnets" {
   type        = list(string)
 }
 
+# variable "private_subnets" {
+#   description = "Private subnets"
+#   type        = list(string)
+# }
+
 variable "ami_id" {
   description = "AMI ID"
   default     = "ami-0d5eff06f840b45e9"

@@ -41,21 +41,32 @@ resource "aws_db_parameter_group" "postgres_parameter_group" {
   }
 }
 
-resource "aws_db_instance" "postgres" {
-  identifier              = "postgres-instance"
-  engine                  = "postgres"
-  engine_version          = "13.3"
-  instance_class          = "db.t3.micro"
-  allocated_storage       = 10
-  db_name                 = "foo_db"
-  username                = "foo"
-  password                = "foobarbaz"
-  port                    = 5432
-  db_subnet_group_name    = aws_db_subnet_group.private_subnets.name
-  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
-  parameter_group_name    = aws_db_parameter_group.postgres_parameter_group.name
-  skip_final_snapshot     = true
-  publicly_accessible     = false
-  backup_retention_period = 1
-  deletion_protection     = false
+# resource "aws_db_instance" "postgres" {
+#   identifier              = "postgres-instance"
+#   engine                  = "postgres"
+#   engine_version          = "13.3"
+#   instance_class          = "db.t3.micro"
+#   allocated_storage       = 10
+#   db_name                 = "foo_db"
+#   username                = "pete"
+#   password                = "devops"
+#   port                    = 5432
+#   db_subnet_group_name    = aws_db_subnet_group.private_subnets.name
+#   vpc_security_group_ids  = [aws_security_group.rds_sg.id]
+#   parameter_group_name    = aws_db_parameter_group.postgres_parameter_group.name
+#   skip_final_snapshot     = true
+#   publicly_accessible     = false
+#   backup_retention_period = 1
+#   deletion_protection     = false
+# }
+
+resource "aws_instance" "database" {
+  ami           = data.aws_ami.amazon-linux.id
+  instance_type = "t2.micro"
+  user_data = file("${path.module}/user_data.sh")
+  subnet_id     = var.private_subnets[0]
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  tags = {
+    Name = "database"
+  }
 }

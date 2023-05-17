@@ -7,6 +7,60 @@ resource "aws_key_pair" "key_pair" {
   public_key = file("~/.ssh/id_rsa.pub")
 }
 
+resource "aws_iam_role" "ec2_instance_role" {
+  name = "ec2_instance_role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_instance_profile" "instance_profile" {
+  name = "instance_profile"
+  role = "${aws_iam_role.ec2_instance_role.name}"
+}
+
+resource "aws_iam_role_policy" "s3_terraform_deploy_policy" {
+  name = "s3_terraform_deploy_policy"
+  role = "${aws_iam_role.ec2_instance_role.id}"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:ListBucket",
+        ]
+        Effect   = "Allow"
+        Resource = [
+          "arn:aws:s3:::aws-terraform-*",
+        ]
+      },
+      {
+        Action = [
+          "s3:GetObject",
+        ]
+        Effect   = "Allow"
+        Resource = [
+          "arn:aws:s3:::aws-terraform-*/*",
+        ]
+      },
+    ]
+  })
+}
+
 resource "aws_launch_configuration" "lc" {
   name_prefix                 = var.launch_configuration_name_prefix
   image_id                    = data.aws_ami.amazon-linux.id
@@ -15,6 +69,7 @@ resource "aws_launch_configuration" "lc" {
   key_name                    = aws_key_pair.key_pair.key_name
   user_data                   = file("${path.module}/user_data.sh") # Path: infrastructure/modules/instances/user_data.sh
   associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.instance_profile.name
 
   lifecycle {
     create_before_destroy = true

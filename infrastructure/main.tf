@@ -11,11 +11,11 @@ module "instances" {
   desired_capacity = 2
 }
 
-module "database" {
-  source = "./modules/database"
+# module "database" {
+#   source = "./modules/database"
 
-  region              = var.region
-  private_subnets     = module.networking.private_subnets
-  vpc_id              = module.networking.vpc_id
-  private_cidr_blocks = module.networking.private_cidr_blocks
-}
+#   region              = var.region
+#   private_subnets     = module.networking.private_subnets
+#   vpc_id              = module.networking.vpc_id
+#   private_cidr_blocks = module.networking.private_cidr_blocks
+# }
