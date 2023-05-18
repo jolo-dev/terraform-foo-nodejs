@@ -19,7 +19,14 @@ resource "aws_security_group" "rds_sg" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = var.private_cidr_blocks
+    cidr_blocks = var.public_cidr_blocks
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = var.public_cidr_blocks
   }
 
   egress {
@@ -31,15 +38,15 @@ resource "aws_security_group" "rds_sg" {
 }
 
 
-resource "aws_db_parameter_group" "postgres_parameter_group" {
-  name   = "postgres-parameter-group"
-  family = "postgres13"
+# resource "aws_db_parameter_group" "postgres_parameter_group" {
+#   name   = "postgres-parameter-group"
+#   family = "postgres13"
 
-  parameter {
-    name  = "log_connections"
-    value = "1"
-  }
-}
+#   parameter {
+#     name  = "log_connections"
+#     value = "1"
+#   }
+# }
 
 # resource "aws_db_instance" "postgres" {
 #   identifier              = "postgres-instance"
@@ -60,12 +67,18 @@ resource "aws_db_parameter_group" "postgres_parameter_group" {
 #   deletion_protection     = false
 # }
 
+resource "aws_key_pair" "key_pair" {
+  key_name   = "key_pair"
+  public_key = file("~/.ssh/id_rsa.pub")
+}
+
 resource "aws_instance" "database" {
   ami           = data.aws_ami.amazon-linux.id
   instance_type = "t2.micro"
   user_data = file("${path.module}/user_data.sh")
   subnet_id     = var.private_subnets[0]
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  key_name = aws_key_pair.key_pair.key_name
   tags = {
     Name = "database"
   }

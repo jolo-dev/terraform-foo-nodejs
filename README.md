@@ -2,7 +2,7 @@
 
 ## Architecture
 
-![Architecture](aws-arch.png)
+![Architecture](./aws-arch.png)
 
 ## Pre-Requisite
 
@@ -11,15 +11,33 @@
 - Node
 - Docker
 
+Follow the next steps in its order.
+
+### Setup the AWS CLI
+
+Please, make sure to have the CLI installed
+
+`aws configure` or use environment variables
+
 ### Create an S3 bucket for bootstrap
 
-Exchange the region in the `Makefile` and run
+Exchange the `BUCKET_NAME` and if necessary the `AWS_REGION` in the `Makefile` and run
 
 ```sh
 make bucket
 ```
 
-The name needs to be remembered and then exchanged in the `BUCKET_NAME` along with the `AWS_REGION` in the `Makefile`.
+Go to the `infrastructure/instances/user_data.tpl` and exchange in line 11 the `aws-terraform-jolo` with your bucket which you defined above in `BUCKET_NAME`.
+
+### Upload the app to the S3- Bucket
+
+The following command zip the app and uploads that to the S3- Bucket
+
+```sh
+make upload_app
+```
+
+If you don't want to work with Github yet, you can jump to [Deployment](#deployment)- Section.
 
 ### Create a role on the AWS Account for Github to deploy
 
@@ -45,11 +63,6 @@ make openid_connect
         ├── instances
         └── networking
 ```
-
-### app
-
-- `app` needs to be zipped and send to S3 run `make upload_zip`
-- `infrastructure` contains the terraform (run `make tf_apply`)
 
 ## Deployment
 

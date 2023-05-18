@@ -12,10 +12,9 @@ variable "public_subnets" {
   type        = list(string)
 }
 
-# variable "private_subnets" {
-#   description = "Private subnets"
-#   type        = list(string)
-# }
+variable "database_ip" {
+  description = "Database IP"
+}
 
 variable "ami_id" {
   description = "AMI ID"
@@ -35,4 +34,8 @@ variable "desired_capacity" {
 variable "launch_configuration_name_prefix" {
   description = "Launch configuration name prefix"
   default     = "foo"
+}
+
+variable "key_pair_name" {
+  description = "Name of the key pair to use for SSH access"
 }

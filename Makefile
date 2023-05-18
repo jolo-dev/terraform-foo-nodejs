@@ -1,4 +1,4 @@
-BUCKET_NAME=aws-terraform-$(shell whoami)
+BUCKET_NAME=aws-terraform-$(shell whoami) # Change this to your own bucket name
 AWS_REGION=us-east-1
 AWS_PROFILE=default
 
@@ -15,7 +15,7 @@ bucket:
 	aws s3api create-bucket --bucket $(BUCKET_NAME) --region $(AWS_REGION) --profile $(AWS_PROFILE)
 
 zip_app:
-	zip -r app.zip app -x app/node_modules/\* -x app/pnpm-lock.yaml -x app/.env
+	zip -r app.zip ./app -x ./app/node_modules/\* -x ./app/pnpm-lock.yaml -x ./app/.env
 
 upload_app: zip_app
 	aws s3 cp app.zip s3://$(BUCKET_NAME)/app.zip
@@ -29,3 +29,6 @@ tf_plan: tf_init
 
 tf_apply: tf_init
 	cd infrastructure && terraform apply --auto-approve
+
+tf_destroy:
+	cd infrastructure && terraform destroy --auto-approve

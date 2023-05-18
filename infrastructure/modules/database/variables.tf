@@ -12,7 +12,7 @@ variable "private_subnets" {
   type        = list(string)
 }
 
-variable "private_cidr_blocks" {
-  description = "Private CIDR blocks"
+variable "public_cidr_blocks" {
+  description = "Public CIDR blocks"
   type        = list(string)
 }

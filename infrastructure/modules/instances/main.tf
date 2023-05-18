@@ -2,11 +2,6 @@ provider "aws" {
   region = var.region
 }
 
-resource "aws_key_pair" "key_pair" {
-  key_name   = "key_pair"
-  public_key = file("~/.ssh/id_rsa.pub")
-}
-
 resource "aws_iam_role" "ec2_instance_role" {
   name = "ec2_instance_role"
 
@@ -66,8 +61,8 @@ resource "aws_launch_configuration" "lc" {
   image_id                    = data.aws_ami.amazon-linux.id
   instance_type               = var.instance_type
   security_groups             = [aws_security_group.ec2_sg.id]
-  key_name                    = aws_key_pair.key_pair.key_name
-  user_data                   = file("${path.module}/user_data.sh") # Path: infrastructure/modules/instances/user_data.sh
+  key_name                    = var.key_pair_name
+  user_data                   = templatefile("${path.module}/user_data.tpl", { database_ip = var.database_ip }) # Path: infrastructure/modules/instances/user_data.sh
   associate_public_ip_address = true
   iam_instance_profile = aws_iam_instance_profile.instance_profile.name
 
@@ -164,6 +159,11 @@ resource "aws_alb_target_group" "target_group" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = var.vpc_id
+  health_check {
+    path = "/health-check"
+    healthy_threshold = 3
+    unhealthy_threshold = 3
+  }
 }
 
 resource "aws_alb_listener" "foo_alb_listener" {

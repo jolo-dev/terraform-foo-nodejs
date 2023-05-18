@@ -20,10 +20,10 @@ app.get('/', function (req, res) {
   res.render('pages/index')
 })
 
-const static_demo_foos = [
-  { name: 'Big Foo', height: '201cm' },
-  { name: 'Little Foo', height: '30cm' }
-]
+// const static_demo_foos = [
+//   { name: 'Big Foo', height: '201cm' },
+//   { name: 'Little Foo', height: '30cm' }
+// ]
 
 // Configure connection to database
 const Pool = require('pg').Pool
